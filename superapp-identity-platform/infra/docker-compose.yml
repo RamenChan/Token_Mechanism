@@ -1,0 +1,42 @@
+#(AED)--> This is the Docker Compose configuration file for the SuperApp Identity Platform. It defines three services:
+
+# 1. `identity`: The main API service for the identity platform, built from the Dockerfile
+#   located in the `apps/identity-api` directory. It sets environment variables for configuration, maps port 8000, 
+#   and depends on the Redis and PostgreSQL services.
+# 2. `redis`: A Redis service using the official Redis 7 Alpine image, mapped to port 6379.
+# 3. `db`: A PostgreSQL service using the official PostgreSQL 16 Alpine image, with environment variables for 
+#   database configuration and mapped to port 5432.
+#
+#This setup allows for easy local development and testing of the identity platform with its dependencies.
+
+services:
+  identity:
+    build: ../apps/identity-api
+    environment:
+      - ENV=dev
+      - JWT_ISSUER=http://localhost:8000
+      - REDIS_URL=redis://redis:6379/0
+      - DATABASE_URL=postgresql+psycopg://postgres:postgres@db:5432/identity
+      - CORS_ORIGINS=http://localhost:3000
+      - RATE_LIMIT_PER_MINUTE=120
+    ports:
+      - "8000:8000"
+    depends_on:
+      - redis
+      - db
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_USER=postgres
+      - POSTGRES_DB=identity
+    ports:
+      - "5432:5432"
+
+
