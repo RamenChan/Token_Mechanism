@@ -20,3 +20,7 @@ class TokenOut(BaseModel):
     token_type: str = "Bearer"
     expires_in: int
     acr: str
+    
+class RefreshIn(BaseModel):
+    refresh_token: str
+    client_id: str = "mobile"

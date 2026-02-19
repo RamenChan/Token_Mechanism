@@ -6,7 +6,7 @@ The `RefreshRecord` dataclass represents the structure of a refresh token record
 
 import hashlib, secrets, time
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, Tuple
 import redis
 from app.core.config import settings
 
@@ -50,23 +50,25 @@ def get_refresh(raw: str) -> Optional[RefreshRecord]:
         consumed=(data.get("consumed") == "1"),
     )
 
-def consume_refresh(raw: str) -> bool:
+def consume_refresh_with_reuse_detection(raw: str) -> Tuple[bool, bool]:
     """
-    Rotating refresh: mark old as consumed atomically.
+    Returns (ok_to_rotate, reuse_detected)
+    - ok_to_rotate True: first use, can rotate
+    - reuse_detected True: token already consumed => possible theft/replay
     """
     key = f"rt:{_hash(raw)}"
-    pipe = r.pipeline()
-    pipe.hget(key, "consumed")
-    res = pipe.execute()
-    if not res or res[0] is None:
-        return False
-    if res[0] == "1":
-        return False
+    if not r.exists(key):
+        return (False, False)
+
+    consumed = r.hget(key, "consumed")
+    if consumed == "1":
+        return (False, True)
+
+    # Mark consumed
     r.hset(key, "consumed", "1")
-    return True
+    return (True, False)
 
 def revoke_session(session_id: str):
-    # Basit MVP: session -> revoke flag
     r.setex(f"sid:revoked:{session_id}", 60 * 60 * 24, "1")
 
 def is_session_revoked(session_id: str) -> bool:

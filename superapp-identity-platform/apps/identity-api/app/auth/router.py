@@ -1,12 +1,19 @@
 '''(AED)--> This file defines the API routes for authentication in the SuperApp Identity Platform.
 It includes endpoints for user registration, login, and a JWKS endpoint for public key discovery.
 The authentication routes utilize the service layer for business logic and the rate limit guard to protect against abuse.
+The `/auth/register` endpoint allows new users to register by providing a username and password. 
+The `/auth/login` endpoint authenticates users and issues access and refresh tokens. The `/.well-known/jwks.json` 
+endpoint exposes the JSON Web Key Set for clients to verify JWT signatures. The `/auth/refresh` endpoint allows 
+clients to obtain new access tokens using a valid refresh token.
+
 '''
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from app.core.rate_limit import rate_limit_guard
 from app.auth.schemas import RegisterIn, LoginIn, TokenOut
 from app.auth.service import register_user, login
+from app.auth.schemas import RefreshIn
+from app.auth.service import refresh as refresh_tokens
 from app.tokens.jwt import jwks
 
 router = APIRouter(prefix="/v1")
@@ -29,3 +36,11 @@ async def do_login(payload: LoginIn, _: None = Depends(rate_limit_guard)):
 @router.get("/.well-known/jwks.json")
 async def well_known_jwks():
     return jwks()
+
+
+@router.post("/auth/refresh", response_model=TokenOut)
+async def do_refresh(payload: RefreshIn, _: None = Depends(rate_limit_guard)):
+    res, err = refresh_tokens(payload.refresh_token, payload.client_id)
+    if err:
+        raise HTTPException(status_code=401, detail=err)
+    return {**res, "token_type": "Bearer"}
