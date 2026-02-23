@@ -12,7 +12,7 @@ for session revocation, detecting refresh token reuse, and issuing new access an
 '''
 
 import time, uuid
-from typing import Dict
+from typing import Dict, Optional
 from passlib.context import CryptContext
 from app.core.config import settings
 from app.tokens.jwt import issue_access_token
@@ -33,7 +33,7 @@ _USERS: Dict[str, str] = {}
 def register_user(username: str, password: str):
     _USERS[username] = pwd.hash(password)
 
-def verify_user(username: str, password: str) -> str | None:
+def verify_user(username: str, password: str) -> Optional[str]:
     h = _USERS.get(username)
     if not h:
         return None
