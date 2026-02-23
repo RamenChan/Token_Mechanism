@@ -16,6 +16,7 @@ from typing import Dict, Optional
 from passlib.context import CryptContext
 from app.core.config import settings
 from app.tokens.jwt import issue_access_token
+from app.tokens.claims import AccessTokenClaims
 from app.tokens.refresh_store import mint_refresh
 from app.tokens.refresh_store import (
     get_refresh,
@@ -44,10 +45,10 @@ def verify_user(username: str, password: str) -> Optional[str]:
 
 def build_access_claims(user_id: str, session_id: str, device_id: str, client_id: str, scope: str, acr: str = "1"):
     now = int(time.time())
-    return {
+    payload = {
         "iss": settings.JWT_ISSUER,
         "sub": user_id,
-        "aud": ["identity-api"],  # Bu token'ın hedef kitlesi. Prod'da farklı servisler olabilir.
+        "aud": ["identity-api"],
         "iat": now,
         "exp": now + settings.ACCESS_TOKEN_TTL_SECONDS,
         "jti": f"at_{uuid.uuid4().hex}",
@@ -60,6 +61,10 @@ def build_access_claims(user_id: str, session_id: str, device_id: str, client_id
         "roles": ["user"],
         "ver": 1,
     }
+
+    # Validate and normalize claims using Pydantic model
+    claims_model = AccessTokenClaims(**payload)
+    return claims_model.model_dump()
 
 def login(username: str, password: str, device_id: str, client_id: str):
     user_id = verify_user(username, password)
