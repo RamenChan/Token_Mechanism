@@ -15,6 +15,8 @@ from app.auth.service import register_user, login
 from app.auth.schemas import RefreshIn
 from app.auth.service import refresh as refresh_tokens
 from app.tokens.jwt import jwks
+from app.auth.deps import get_current_claims
+from app.auth.deps import require_role
 
 router = APIRouter(prefix="/v1")
 
@@ -44,3 +46,21 @@ async def do_refresh(payload: RefreshIn, _: None = Depends(rate_limit_guard)):
     if err:
         raise HTTPException(status_code=401, detail=err)
     return {**res, "token_type": "Bearer"}
+
+
+@router.get("/auth/me")
+async def me(claims = Depends(get_current_claims)):
+    # return minimal claims for the authenticated subject
+    return {
+        "sub": claims.sub,
+        "cid": claims.cid,
+        "scope": claims.scope,
+        "roles": claims.roles,
+    }
+
+
+
+@router.get("/auth/admin")
+async def admin_area(claims = Depends(require_role("admin"))):
+    """Admin-only endpoint to verify role-based access control."""
+    return {"ok": True, "sub": claims.sub}
