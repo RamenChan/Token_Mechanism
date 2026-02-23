@@ -9,7 +9,10 @@ dependencies = [
   "pyjwt>=2.8",
   "cryptography>=42.0",
   "redis>=5.0",
-  "passlib[bcrypt]>=1.7",
+
+  # auth
+  "passlib>=1.7.4",
+  "bcrypt==4.0.1"
 ]
 
 [tool.pytest.ini_options]
